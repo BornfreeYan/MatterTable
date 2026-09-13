@@ -1,0 +1,89 @@
+{
+  "name": "mattertable",
+  "displayName": "MatterTable",
+  "description": "把 Markdown 的 front matter 显示成可编辑的多维表格，纯本地、无云端。",
+  "version": "0.3.0",
+  "publisher": "BornfreeYan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BornfreeYan/MatterTable.git"
+  },
+  "homepage": "https://github.com/BornfreeYan/MatterTable#readme",
+  "bugs": {
+    "url": "https://github.com/BornfreeYan/MatterTable/issues"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "front matter",
+    "markdown",
+    "table",
+    "knowledge base",
+    "metadata"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "mattertable.openTable",
+        "title": "打开表格",
+        "category": "MatterTable"
+      },
+      {
+        "command": "mattertable.refresh",
+        "title": "刷新表格",
+        "category": "MatterTable"
+      },
+      {
+        "command": "mattertable.openConfig",
+        "title": "打开配置文件",
+        "category": "MatterTable"
+      },
+      {
+        "command": "mattertable.undoLastWrite",
+        "title": "撤销上一次改动",
+        "category": "MatterTable"
+      },
+      {
+        "command": "mattertable.showLog",
+        "title": "显示日志（排查问题用）",
+        "category": "MatterTable"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "smoke": "node build.mjs && node scripts/smoke.cjs",
+    "audit": "node build.mjs && esbuild scripts/audit.ts --bundle --platform=node --format=cjs --outfile=dist/audit.cjs && node dist/audit.cjs",
+    "verify": "tsc --noEmit && vitest run && node build.mjs && node scripts/smoke.cjs",
+    "fixtures": "node scripts/make-test-fixtures.cjs",
+    "vsix": "node build.mjs && vsce package --no-dependencies --allow-missing-repository -o release"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/vscode": "^1.80.0",
+    "@vscode/vsce": "^2.32.0",
+    "esbuild": "^0.24.0",
+    "jsdom": "^30.0.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

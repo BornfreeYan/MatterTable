@@ -1,0 +1,8 @@
+# pnpm 11 的构建脚本放行清单（它会自动生成并维护这个文件）
+# esbuild 需要跑安装脚本准备平台二进制；另两个只服务发布签名/凭据存储，打包 .vsix 用不到。
+allowBuilds:
+  esbuild: true
+  '@vscode/vsce-sign': false
+  keytar: false
+onlyBuiltDependencies:
+  - esbuild

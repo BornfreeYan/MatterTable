@@ -1,0 +1,17 @@
+.vscode/**
+.vscode-test/**
+src/**
+test/**
+scripts/**
+docs/**
+release/**
+node_modules/**
+.gitignore
+build.mjs
+tsconfig.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+dist/audit.cjs
+dist/audit.mjs
+dist/**/*.map
+**/*.ts
