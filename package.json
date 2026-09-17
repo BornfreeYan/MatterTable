@@ -2,7 +2,7 @@
   "name": "mattertable",
   "displayName": "MatterTable",
   "description": "把 Markdown 的 front matter 显示成可编辑的多维表格，纯本地、无云端。",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "BornfreeYan",
   "license": "MIT",
   "repository": {

@@ -17,7 +17,7 @@ Cursor 读的是 Open VSX / 本地 vsix，本扩展目前以 `.vsix` 形式本�
 
 ```bash
 # 命令行安装（把路径换成实际的 vsix 文件）
-cursor --install-extension "D:\KnowledgeBase\5 Projects\MatterTable\release\mattertable-0.3.0.vsix"
+cursor --install-extension "D:\KnowledgeBase\5 Projects\MatterTable\release\mattertable-0.3.1.vsix"
 ```
 
 也可以图形界面：Cursor 里按 `Ctrl+Shift+P` → `Extensions: Install from VSIX...` → 选中该 `.vsix`。
@@ -192,7 +192,7 @@ cursor --install-extension "D:\KnowledgeBase\5 Projects\MatterTable\release\matt
 ```bash
 pnpm install            # 安装依赖（pnpm 11 的构建脚本放行写在 pnpm-workspace.yaml 里）
 pnpm typecheck          # 类型检查
-pnpm test               # 单元测试 + 界面组件测试（写入器 / 排序 / 忽略清单 / 筛选引擎 / React 组件，共 150 项）
+pnpm test               # 单元测试 + 界面组件测试（写入器 / 排序 / 忽略清单 / 筛选引擎 / React 组件，共 152 项）
 pnpm build              # 打包扩展宿主与界面到 dist/
 pnpm watch              # 开发模式（改动即重建）
 pnpm smoke              # 集成冒烟测试：桩替换 vscode API 跑「扫描→写入→撤销→冲突」全流程

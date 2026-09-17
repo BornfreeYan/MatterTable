@@ -103,7 +103,7 @@ label.toggle { display: inline-flex; align-items: center; gap: 4px; cursor: poin
 }
 .inline-form .inline-actions button.primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border-color: transparent; }
 
-.grid { flex: 1; overflow: auto; position: relative; outline: none; }
+.grid { flex: 1; min-height: 0; overflow: auto; position: relative; outline: none; }
 .grid-content { position: relative; }
 .header-row {
   display: flex; position: sticky; top: 0; z-index: 3; height: 30px;

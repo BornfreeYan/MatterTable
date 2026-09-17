@@ -23,6 +23,8 @@ import { FilterBar, ViewSwitcher } from './views';
 const ROW_H = 30;
 const HEADER_H = 30;
 const OVERSCAN = 8;
+/** 视口高度测量失败时的兜底值 */
+const FALLBACK_VIEWPORT_H = 600;
 
 const EMPTY_VIEW: ViewConfig = {
   id: '',
@@ -83,8 +85,11 @@ export function App({ post }: AppProps): JSX.Element {
   const [dragKey, setDragKey] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
-  const [viewportH, setViewportH] = useState(600);
+  const [viewportH, setViewportH] = useState(0);
   const [loaded, setLoaded] = useState(false);
+
+  const currentView = useMemo(() => views.find((v) => v.id === viewId) ?? views[0] ?? EMPTY_VIEW, [views, viewId]);
+  const isCalendar = currentView.type === 'calendar';
 
   const gridRef = useRef<HTMLDivElement>(null);
   const noticeId = useRef(1);
@@ -172,14 +177,28 @@ export function App({ post }: AppProps): JSX.Element {
     return () => window.removeEventListener('message', handler);
   }, [post, pushNotice, setLocalCell]);
 
+  // 视口高度：虚拟滚动要知道可用高度。
+  // 这个 effect 必须依赖 isCalendar——从日历切回表格时 .grid 是新的 DOM 元素，
+  // 不重新挂 ResizeObserver 的话会一直沿用旧元素（甚至 0）的高度，
+  // 表现就是表格只渲染最上面几行、下面全是空白。
   useEffect(() => {
     const el = gridRef.current;
     if (!el) return;
-    const observer = new ResizeObserver(() => setViewportH(el.clientHeight));
+    const measure = () => {
+      const height = el.clientHeight;
+      // 面板被切到后台（retainContextWhenHidden）或元素正在被卸载时高度会是 0，
+      // 这时不能写进状态，否则表格会退化成只剩 overscan 那几行。
+      if (height > 0) setViewportH(height);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
-    setViewportH(el.clientHeight);
-    return () => observer.disconnect();
-  }, []);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [isCalendar]);
 
   const fieldMap = useMemo(() => new Map(fields.map((f) => [f.key, f])), [fields]);
 
@@ -213,7 +232,6 @@ export function App({ post }: AppProps): JSX.Element {
     });
   }, [rows, search]);
 
-  const currentView = useMemo(() => views.find((v) => v.id === viewId) ?? views[0] ?? EMPTY_VIEW, [views, viewId]);
 
   /** 搜索与视图筛选都是前端完成的：切视图、改条件都不会触发重新扫描 */
   const visibleRows = useMemo(
@@ -227,7 +245,6 @@ export function App({ post }: AppProps): JSX.Element {
   );
 
   const filterActive = (currentView.filter?.conditions ?? []).length > 0 || search.trim() !== '';
-  const isCalendar = currentView.type === 'calendar';
 
   const totalWidth = useMemo(
     () => visibleFields.reduce((sum, field) => sum + (widths[field.key] ?? field.width), 0),
@@ -235,7 +252,9 @@ export function App({ post }: AppProps): JSX.Element {
   );
 
   const start = Math.max(0, Math.floor(scrollTop / ROW_H) - OVERSCAN);
-  const end = Math.min(sortedRows.length, Math.ceil((scrollTop + viewportH) / ROW_H) + OVERSCAN);
+  // 测量还没成功（或面板不可见）时按 600px 估算，宁可多渲染几行也不能只渲染几行
+  const visibleHeight = viewportH > 0 ? viewportH : FALLBACK_VIEWPORT_H;
+  const end = Math.min(sortedRows.length, Math.ceil((scrollTop + visibleHeight) / ROW_H) + OVERSCAN);
   const slice = sortedRows.slice(start, end);
 
   const commitCell = useCallback(

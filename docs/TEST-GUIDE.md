@@ -2,8 +2,8 @@
 
 这份文档是给你（测试者）用的。你只需要做两件事：**把 `.vsix` 装进 Cursor**，然后**按清单点一遍**。
 
-> 当前版本 **0.3.0**：新增**日历视图**（v2.1）；0.2.1 那轮反馈的 3 个问题也已修掉。
-> 文档结构：第 0 节日历验收（v2.1 新增）、第 1 节 v2 筛选与多视图清单、第 2 节上一轮修复、第 3~6 节安装与准备、第 7 节 v1 清单（A~H）、第 9 节已知行为、第 10 节反馈方式、第 12 节历史修复记录。
+> 当前版本 **0.3.1**：新增**日历视图**（v2.1），并修复了「视图切换后表格只渲染几行」的问题（见 0.5 节）。
+> 文档结构：第 0 节日历验收（v2.1 新增）、第 0.5 节本次修复（0.3.1）、第 1 节 v2 筛选与多视图清单、第 2 节上一轮修复、第 3~6 节安装与准备、第 7 节 v1 清单（A~H）、第 9 节已知行为、第 10 节反馈方式、第 12 节历史修复记录。
 
 ---
 
@@ -29,6 +29,28 @@
 **最容易出问题的两处，请重点看**：C4（拖拽是否立刻生效 + 文件是否只改了日期那一段）、C8~C9（筛选与日历的配合）。
 
 **明确不做**：多日任务（start + due 显示成一条跨天条）——按你的要求不做。
+
+---
+
+## 0.5. 0.3.1 修好了什么（请复测）
+
+**你反馈的问题**：如果一进来是日历视图，再切到表格视图，表格只显示页面上半部分（下面全是空白）；只有退出重开、一进来就是表格时才正常。
+
+**根因**：表格是虚拟滚动的，只渲染「视口高度 ÷ 行高 + 8 行」。视口高度靠一个 `ResizeObserver` 测量，而它**只在挂载时建立一次**：
+
+- 在日历视图下打开面板时，表格的 DOM 还不存在，观察器没建立，之后再切回表格也不会补上；
+- 从表格切到日历时，旧的表格元素被卸载，浏览器报告 **0 高度**，代码把这个 0 直接记下来 → 视口高度变 0 → 只渲染 8 行（正好等于 overscan 值，和你截图里的 8 行一致）。
+
+**修法**：视图切换后重新挂观察器、忽略 0 高度、视口高度未知时按 600px 兜底。
+
+**请复测**：
+
+| 复测项 | 期望 |
+| --- | --- |
+| 一进来是日历 → 切到表格（重测） | 表格**铺满**整个面板，不再只占上半部分 |
+| 表格里往下滚动 | 能一直滚到最后一篇（229 篇都能滚到），不会滚一段就没了 |
+| 表格 ↔ 日历来回切换几次 | 每次回到表格都正常铺满、能正常滚动 |
+| 把面板切到后台再切回来（点别的标签页再点回 MatterTable） | 表格仍然铺满、滚动正常 |
 
 ---
 
@@ -80,7 +102,7 @@ node "D:\KnowledgeBase\5 Projects\MatterTable\scripts\make-test-fixtures.cjs" "�
 
 | 东西 | 位置 |
 | --- | --- |
-| 安装包 | `D:\KnowledgeBase\5 Projects\MatterTable\release\mattertable-0.3.0.vsix` |
+| 安装包 | `D:\KnowledgeBase\5 Projects\MatterTable\release\mattertable-0.3.1.vsix` |
 | 源码 | `D:\KnowledgeBase\5 Projects\MatterTable\src\` |
 | 需求与设计文档 | `docs\MVP-PRD.md` |
 | 本测试指南 | `docs\TEST-GUIDE.md` |
@@ -90,7 +112,7 @@ node "D:\KnowledgeBase\5 Projects\MatterTable\scripts\make-test-fixtures.cjs" "�
 | 项 | 结果 |
 | --- | --- |
 | 写入器单元测试（CRLF / BOM / 引号 / 块状列表 / 注释 / 非法 YAML / 嵌套结构 / 补骨架） | 62 项全部通过 |
-| 界面组件测试（jsdom 里真实渲染 React 组件：值显示、列宽、编辑、弹窗锚点、多选增删标签、嵌套结构隐藏、拖动列顺序、筛选条件栏、视图切换器、消息浮层、日历视图与拖拽改日期） | 55 项全部通过 |
+| 界面组件测试（jsdom 里真实渲染 React 组件：值显示、列宽、编辑、弹窗锚点、多选增删标签、嵌套结构隐藏、拖动列顺序、筛选条件栏、视图切换器、消息浮层、日历视图与拖拽改日期） | 57 项全部通过 |
 | 筛选引擎单测（六种字段类型 × 操作符、AND/OR、空值判定、数字/日期比较、失效字段与未填值容错） | 20 项全部通过 |
 | 日期工具单测（本地日期、非法日期、ISO 时间戳、列表取日期、月矩阵周一起始/固定 6×7/跨月跨年/闰年、翻月与标题） | 13 项全部通过 |
 | 真实数据审计：全库 875 个 markdown，按默认忽略清单实际扫描 **259 个**（排除 70.4%），耗时 **460 ms** | 通过 |
@@ -114,20 +136,20 @@ node "D:\KnowledgeBase\5 Projects\MatterTable\scripts\make-test-fixtures.cjs" "�
 
 1. Cursor 里按 `Ctrl+Shift+P`
 2. 输入 `Install from VSIX`，选 `Extensions: Install from VSIX...`
-3. 选中 `release\mattertable-0.3.0.vsix`
+3. 选中 `release\mattertable-0.3.1.vsix`
 4. 右下角会提示安装成功，点 `Reload`（或手动 `Ctrl+Shift+P` → `Developer: Reload Window`）
 
 **方式二：命令行**
 
 ```bash
-cursor --install-extension "D:\KnowledgeBase\5 Projects\MatterTable\release\mattertable-0.3.0.vsix"
+cursor --install-extension "D:\KnowledgeBase\5 Projects\MatterTable\release\mattertable-0.3.1.vsix"
 ```
 
 （如果提示 `cursor` 不是命令，用方式一或方式三。）
 
 **方式三：拖拽** —— 把 `.vsix` 文件直接拖进 Cursor 窗口。
 
-**验证版本**：`Ctrl+Shift+X` 搜索 MatterTable，版本应显示 `0.3.0`。
+**验证版本**：`Ctrl+Shift+X` 搜索 MatterTable，版本应显示 `0.3.1`。
 
 **以后想卸载**：扩展面板里找到 MatterTable → 卸载；或 `cursor --uninstall-extension BornfreeYan.mattertable`。
 

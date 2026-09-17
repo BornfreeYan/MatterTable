@@ -11,10 +11,22 @@ import { App } from '../src/webview/App';
  *   2. 进入编辑时单元格 DOM 被替换，导致下拉面板锚点失效跑到页面左上角
  */
 
+const resizeCallbacks: ResizeObserverCallback[] = [];
+
 class ResizeObserverStub {
+  constructor(callback: ResizeObserverCallback) {
+    resizeCallbacks.push(callback);
+  }
   observe(): void {}
   unobserve(): void {}
   disconnect(): void {}
+}
+
+/** 触发一次「重新测量」。jsdom 里 clientHeight 恒为 0，正好模拟面板切到后台或元素被卸载的情形。 */
+function triggerResize(): void {
+  act(() => {
+    for (const callback of resizeCallbacks) callback([], {} as ResizeObserver);
+  });
 }
 
 function field(partial: Partial<ResolvedField> & { key: string; type: ResolvedField['type'] }): ResolvedField {
@@ -138,6 +150,7 @@ beforeEach(() => {
   Object.defineProperty(window, 'innerWidth', { value: 1400, configurable: true });
   Object.defineProperty(window, 'innerHeight', { value: 800, configurable: true });
   (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub;
+  resizeCallbacks.length = 0;
 });
 
 describe('表格渲染', () => {
@@ -817,6 +830,53 @@ describe('日历视图（v2.1）', () => {
     fireEvent.change(input, { target: { value: '发布计划' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(post).toHaveBeenCalledWith({ type: 'createView', name: '发布计划', copyCurrent: false, viewType: 'calendar' });
+  });
+});
+
+describe('虚拟滚动的视口高度（回归：表格只渲染最上面几行）', () => {
+  const manyRows: RowData[] = Array.from({ length: 80 }, (_, i) => ({
+    id: `n${i}.md`,
+    fileName: `n${i}.md`,
+    relPath: `d/n${i}.md`,
+    values: { title: `第 ${i} 篇`, date: null, state: [], tags: [], priority: null, published: null, hero: null },
+    hasFrontmatter: true,
+  }));
+  const manyInit = (over: Partial<InitMessage> = {}): InitMessage =>
+    initMessage({ rows: manyRows, stats: { shown: manyRows.length, unparsable: 0, withoutFrontmatter: 0 }, ...over });
+
+  it('测量到 0 高度时按兜底视口渲染，而不是退化成只剩 overscan 那几行', () => {
+    renderApp(manyInit());
+    const before = document.querySelectorAll('.row').length;
+    expect(before).toBeGreaterThan(20);
+
+    triggerResize(); // 模拟一次 0 高度测量（面板切到后台 / 元素正在卸载）
+    expect(document.querySelectorAll('.row').length).toBe(before);
+  });
+
+  it('从日历视图切到表格视图后表格仍然铺满，并且滚动能继续渲染后面的行', () => {
+    const calendarView: ViewConfig = {
+      id: 'cal2',
+      name: '日历',
+      type: 'calendar',
+      dateField: 'date',
+      filter: { logic: 'and', conditions: [] },
+    };
+    renderApp(manyInit({ view: calendarView, views: [calendarView] }));
+    expect(document.querySelector('.calendar')).toBeTruthy();
+    triggerResize(); // 日历挂载时表格并不存在，这次测量会被忽略
+
+    send(manyInit({ view: defaultView, views: [defaultView] }));
+    expect(document.querySelector('.calendar')).toBeNull();
+    expect(document.querySelectorAll('.row').length).toBeGreaterThan(20);
+
+    triggerResize();
+    expect(document.querySelectorAll('.row').length).toBeGreaterThan(20);
+
+    // 虚拟滚动本身没坏：滚下去能渲染出后面的行
+    const grid = document.querySelector('.grid') as HTMLElement;
+    grid.scrollTop = 1200;
+    fireEvent.scroll(grid);
+    expect(screen.getByText('第 48 篇')).toBeTruthy();
   });
 });
 
